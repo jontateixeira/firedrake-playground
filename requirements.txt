@@ -1,0 +1,113 @@
+alabaster==0.7.12
+apipkg==1.5
+appdirs==1.4.4
+astroid==2.4.2
+attrs==20.3.0
+autopep8==1.5.4
+Babel==2.9.0
+backcall==0.2.0
+bibtexparser==1.2.0
+cached-property==1.5.2
+cachetools==4.2.0
+certifi==2020.12.5
+cgen==2017.1
+chardet==4.0.0
+codepy==2019.1
+-e git+https://github.com/coneoproject/COFFEE.git@70c1e66a4e4e39d3bf75274505a16901af110751#egg=COFFEE
+colorama==0.4.4
+cycler==0.10.0
+Cython==0.29.21
+decorator==4.4.2
+docutils==0.16
+-e git+https://github.com/dolfin-adjoint/pyadjoint.git@f635da08285ab307fa156be085a8b63d5d3b1e3f#egg=dolfin_adjoint
+execnet==1.7.1
+-e git+https://github.com/firedrakeproject/fiat.git@42ceef358d4c1273a8ef83dac8169d7a3a54f968#egg=fenics_fiat
+-e git+https://github.com/firedrakeproject/ufl.git@057c5f6f06687c401dab7683c2406a0e91901c9c#egg=fenics_ufl
+-e git+https://github.com/FInAT/FInAT.git@9a4db73a9d198e9cd03eeae4bff5c2c49f0c952b#egg=FInAT
+-e git+https://github.com/firedrakeproject/firedrake.git@149ff032331710c36c897f6b7e377e84b4210330#egg=firedrake
+flake8==3.8.4
+future==0.18.2
+genpy==2016.1.3
+h5py @ file:///home/john/opt/firedrake/src/h5py
+idna==2.10
+imagesize==1.2.0
+iniconfig==1.1.1
+ipython==7.19.0
+ipython-genutils==0.2.0
+islpy==2020.2.2
+isort==5.7.0
+jedi==0.18.0
+Jinja2==2.11.2
+kiwisolver==1.3.1
+latexcodec==2.0.1
+lazy-object-proxy==1.4.3
+-e git+https://github.com/firedrakeproject/loopy.git@cbbdc7ebb6298859e2238ea207474b49a3706f2e#egg=loo.py
+Mako==1.1.3
+MarkupSafe==1.1.1
+matplotlib==3.3.3
+mccabe==0.6.1
+mpi4py==3.0.3
+mpmath==1.1.0
+mypy==0.790
+mypy-extensions==0.4.3
+networkx==2.5
+numpy==1.19.4
+packaging==20.8
+pandas==1.2.0
+parso==0.8.1
+petsc4py @ file:///home/john/opt/firedrake/src/petsc4py
+pexpect==4.8.0
+pickleshare==0.7.5
+Pillow==8.1.0
+pkg-resources==0.0.0
+pkgconfig==1.5.1
+pluggy==0.13.1
+prompt-toolkit==3.0.8
+ptyprocess==0.7.0
+PuLP==2.4
+py==1.10.0
+pybind11==2.6.1
+pybtex==0.23.0
+pybtex-docutils==0.2.2
+pycodestyle==2.6.0
+pycparser==2.20
+pyflakes==2.2.0
+Pygments==2.7.3
+pylint==2.6.0
+pymbolic==2020.1
+-e git+https://github.com/OP2/PyOP2.git@365292467b943d27f593e540db587a68b1c498e5#egg=PyOP2
+pyparsing==2.4.7
+pytest==6.2.1
+pytest-forked==1.3.0
+pytest-xdist==2.2.0
+python-dateutil==2.8.1
+pytools==2020.4.4
+pytz==2020.5
+PyYAML==5.3.1
+randomgen==1.16.4
+reaktoro==1.0.6
+requests==2.25.1
+six==1.15.0
+slepc4py @ file:///home/john/opt/firedrake/src/slepc4py
+snowballstemmer==2.0.0
+Sphinx==3.4.1
+sphinxcontrib-applehelp==1.0.2
+sphinxcontrib-bibtex==2.1.3
+sphinxcontrib-devhelp==1.0.2
+sphinxcontrib-htmlhelp==1.0.3
+sphinxcontrib-jsmath==1.0.1
+sphinxcontrib-qthelp==1.0.3
+sphinxcontrib-serializinghtml==1.1.4
+sphinxcontrib-youtube @ git+https://github.com/sphinx-contrib/youtube.git@635c8a908e3cac552ce43293c1516e7270cc4ce8
+symengine==0.6.1
+sympy==1.7.1
+thermofun==0.3.3
+toml==0.10.2
+traitlets==5.0.5
+-e git+https://github.com/firedrakeproject/tsfc.git@c220702e9eb62975a89fa65ef40f849e81b574cb#egg=tsfc
+typed-ast==1.4.2
+typing-extensions==3.7.4.3
+urllib3==1.26.2
+vtk==9.0.1
+wcwidth==0.2.5
+wrapt==1.12.1

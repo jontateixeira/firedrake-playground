@@ -185,7 +185,7 @@ vel_proj.rename('velocity_proj')
 # project permeability Kxx
 kxx = fd.Function(DG)
 kxx.rename('Kxx')
-kxx.dat.data[...] = Kinv.dat.data[:, 0, 0]
+kxx.dat.data[...] = 1 / Kinv.dat.data[:, 0, 0]
 
 # print results
 fd.File("plots/darcy_rt.pvd").write(vel_proj, press, kxx)

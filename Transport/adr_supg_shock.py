@@ -66,7 +66,7 @@ if verbose:
     plt.legend()
     plt.savefig("plots/adr_supg_mesh.png")
 
-# 3) Setting problem (FunctionSpace, Init.Bound.Condition, VariationalForms)
+# 3) Setting problem (FunctionSpace, Init.Condition, VariationalForms)
 
 # 3.1) # Define function space for system of concentrations (transport)
 X = fd.FunctionSpace(mesh, "CG", order)

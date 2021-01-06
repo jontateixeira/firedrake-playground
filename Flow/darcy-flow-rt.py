@@ -21,7 +21,6 @@ import firedrake as fd
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage as ndimage
-from ufl.constant import Constant
 print('* modules loaded')
 
 # %%
@@ -40,9 +39,9 @@ print('* problem setting')
 order = 1
 n = 4
 nx = 5
-ny = 5
-Lx = 10                             # m
-Ly = 10                             # m
+ny = 10
+Lx = 60                             # m
+Ly = 30                             # m
 
 # permeability field generator parameter
 sigma = 2.5
@@ -51,7 +50,7 @@ par_b = 2.0
 par_c = 4.5
 
 # boundary conditions parameters
-qbar = (1.0, 0.0)
+qbar = (0.1 / 86400, 0.0)
 inlet = LEFT
 
 pbar = 0.001
@@ -106,7 +105,7 @@ Kinv = fd.Function(T, name="Kinv")
 
 k = np.random.randn(nx * n, ny * n) + par_a*np.random.randn(1)
 kf = ndimage.gaussian_filter(k, sigma)
-kl = np.exp(par_b+par_c*kf)
+kl = np.exp(par_b+par_c*kf)*1e-13   # m²
 
 
 if verbose:
@@ -133,7 +132,7 @@ ccenter = fd.interpolate(mesh.coordinates, V)
 def fix_perm_map(x, y):
     i = np.floor(x / (Lx / (nx * n))).astype(int)
     j = np.floor(y / (Ly / (ny * n))).astype(int)
-    return kl[j, i]
+    return kl[i, j]
 
 
 Kinv.dat.data[:, 0, 0] = 1 / \
@@ -163,7 +162,6 @@ bc1 = fd.DirichletBC(W.sub(0), fd.Constant(q0bar), noflow)
 # Now we're ready to solve the variational problem. We define `w` to be a
 # function to hold the solution on the mixed space.
 w = fd.Function(W)
-# problem = fd.LinearVariationalProblem(a, L, w, bcs=[bc0, bc1])
 
 # solve
 fd.solve(a == L, w, bcs=[bc0, bc1])
@@ -189,3 +187,5 @@ kxx.dat.data[...] = 1 / Kinv.dat.data[:, 0, 0]
 
 # print results
 fd.File("plots/darcy_rt.pvd").write(vel_proj, press, kxx)
+
+print('* normal termination')

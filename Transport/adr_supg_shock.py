@@ -2,8 +2,50 @@
 # -*- coding: utf-8 -*-
 
 """
-Advection-Diffusion-Reaction: SUPG + shock capturing term
+Solves the unsteady state advection-diffusion-reaction problem, using SUPG and
+shock capturing term
+
+Strong form (SF):
+
+          dc/dt + div(c*u) = div(D*grad(c)) - k*c^n + f
+
+The problem is either advection- or diffusion-dominated, depending on the ratio
+u*h/D, where h is the characteristic length scale.
+
+Weak form:
+
+Find c in W, such that,
+
+        (w, dc/dt) + (w, u.grad(c)) + (grad(w),D*grad(c)) 
+                   + (w, k*c^n) + SUPG + Shock = (w, f)            on Omega
+
+where,
+        SUPG  = (grad(w),tau*res*u)
+          res = dc/dt + (w, u.grad(c)) + (grad(w),D*grad(c)) 
+                   + (w, k*c^n) - (w, f)
+          tau = h_mesh/(2*||u||)
+        Shock = (grad(w),vshock*|res|*grad(c))
+                 { Beta*h_mesh*abs(res)/(2*||grad(c)||), if ||grad(c)|| > 0
+       vshock <--{
+                 { 0, o.w
+
+for all w in W'.
+
+Model problem:
+
+ -----4-----
+ |         |
+ 1  --> u  2
+ |         |
+ -----3-----
+
+Initial Conditions:
+c(x, 0) = 0 in Omega
+
+Boundary Conditions:
+c(x, t) = cbar      on Gamma_1
 """
+
 # %%
 # 0) importing modules
 import firedrake as fd
@@ -35,7 +77,7 @@ quad_mesh = True
 
 # reaction/transport parameter
 Diff = 1e-1                 # diffusion coefficient
-K = 0.00                      # reaction rate
+K = 0.01                      # reaction rate
 h_n = fd.Constant(0.)       # outflow condition (BC)
 cIn = 1.0
 s = 0.0
@@ -92,7 +134,7 @@ t_bc = fd.DirichletBC(X, cIn, inlet)
 # 3.4) Variational Form
 # coefficients
 # advective velocity
-vel = fd.Function(V, name='velocity').interpolate(fd.as_vector([1.000, 0.]))
+vel = fd.Function(V, name='velocity').interpolate(fd.as_vector([1.0, 0.]))
 K = fd.Constant(K)
 Diff = fd.Constant(Diff)
 Dt = fd.Constant(1e-3)
@@ -135,26 +177,26 @@ if add_shock_term:
 F = F1
 
 
-# solver_parameters = {
-#     'ksp_type': 'lgmres',
-#     'pc_type': 'ilu',
-#     'mat_type': 'aij',
-#     'ksp_rtol': 1e-8,
-#     'ksp_max_it': 2000,
-#     'ksp_monitor_true_residual': None
-# }
 t_params = {
     'snes_type': 'newtonls',
     'snes_max_it': 100,
     'ksp_type': 'gmres',
     'pc_type': 'sor',
     'ksp_rtol': 1e-6,
-    'ksp_max_it': 1000,
-    # 'pc_type': 'bjacobi',
-    # 'pc_type': 'sor',
-    # 'snes_monitor': True,
-    # 'ksp_monitor': True,
+    'ksp_max_it': 1000
 }
+# 'pc_type': 'bjacobi',
+# 'pc_type': 'sor',
+# 'snes_monitor': True,
+# 'ksp_monitor': True,
+# 'ksp_type': 'lgmres',
+# 'pc_type': 'ilu',
+# 'mat_type': 'aij',
+# 'ksp_rtol': 1e-8,
+# 'ksp_max_it': 2000,
+# 'ksp_monitor_true_residual': None
+#
+
 prob = fd.NonlinearVariationalProblem(F, c, bcs=t_bc)
 transport = fd.NonlinearVariationalSolver(prob, solver_parameters=t_params)
 

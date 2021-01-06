@@ -1,10 +1,43 @@
 #!/home/john/opt/firedrake/bin/python3
 # -*- coding: utf-8 -*-
 """
-Advection-Diffusion-Reaction problem:
-    - SUPG
-    - Crank-Nicolson timestepping
-    - CFL-stable timestep
+Solves the unsteady state advection-diffusion-reaction problem, using SUPG
+
+Strong form (SF):
+
+          dc/dt + div(c*u) = div(D*grad(c)) - k*c^n + f
+
+The problem is either advection- or diffusion-dominated, depending on the ratio
+u*h/D, where h is the characteristic length scale.
+
+Weak form:
+
+Find c in W, such that,
+
+        (w, dc/dt) + (w, u.grad(c)) + (grad(w),D*grad(c)) 
+                   + (w, k*c^n) + SUPG = (w, f)            on Omega
+
+where,
+        SUPG  = (grad(w),tau*res*u)
+          res = dc/dt + (w, u.grad(c)) + (grad(w),D*grad(c)) 
+                   + (w, k*c^n) - (w, f)
+          tau = h_mesh/(2*||u||)
+
+for all w in W'.
+
+Model problem:
+
+ -----4-----
+ |         |
+ 1  --> u  2
+ |         |
+ -----3-----
+
+Initial Conditions:
+c(x, 0) = 0 in Omega
+
+Boundary Conditions:
+c(x, t) = cbar      on Gamma_1
 """
 
 # %%

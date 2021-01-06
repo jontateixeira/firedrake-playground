@@ -4,11 +4,13 @@ This playground repo contains several scripts to solve some problems that I face
 
 # Available playground problems
 * **Flow**
-
-* **Mechanics**
+    * Mixed Finite element (Raviart-Thomas) for Darcy flow with spatially varying permeability ,inspired in MRST lognormal function.
 
 * **Transport**
     * Transient linear advection-diffusion-reaction with a simple first-order reaction term. Available with the Crank-Nicolson time stepping and discretization example:
-        - SUPG term
-        - SUPG + shock capturing terms
+        - SUPG
+        - SUPG + shock capturing stabilization
+    * Two phases flow through porous media problem in a full implicit scheme.
+
+* **Thermal**
 

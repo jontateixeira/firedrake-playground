@@ -42,6 +42,8 @@ nx = 5
 ny = 10
 Lx = 60                             # m
 Ly = 30                             # m
+quad_mesh = True
+
 
 # permeability field generator parameter
 sigma = 2.5
@@ -53,7 +55,7 @@ par_c = 4.5
 qbar = (0.1 / 86400, 0.0)
 inlet = LEFT
 
-pbar = 0.001
+pbar = 10001
 outlet = RIGHT
 
 q0bar = (0.0, 0.0)
@@ -71,7 +73,7 @@ sim_time = 50.0     # simulation time
 
 # 2) Define mesh
 print('* define mesh')
-mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly)
+mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly, quadrilateral=quad_mesh)
 
 if verbose:
     fd.triplot(mesh)
@@ -83,13 +85,23 @@ if verbose:
 print('* setting problem')
 
 # 3.1) # Define function space for system
-RT = fd.FunctionSpace(mesh, "RT", order)
-DG = fd.FunctionSpace(mesh, "DG", order - 1)
+if quad_mesh:
+    RT = fd.FunctionSpace(mesh, "RTCF", order)
+    DG = fd.FunctionSpace(mesh, "DQ", order - 1)
+
+    # Others function space
+    V = fd.VectorFunctionSpace(mesh, "DQ", order - 1)
+    T = fd.TensorFunctionSpace(mesh, "DQ", order - 1)
+else:
+    RT = fd.FunctionSpace(mesh, "RT", order)
+    DG = fd.FunctionSpace(mesh, "DG", order - 1)
+
+    # Others function space
+    V = fd.VectorFunctionSpace(mesh, "DG", order - 1)
+    T = fd.TensorFunctionSpace(mesh, "DG", order - 1)
+
 W = RT * DG
 
-# Others function space
-V = fd.VectorFunctionSpace(mesh, "DG", order - 1)
-T = fd.TensorFunctionSpace(mesh, "DG", order - 1)
 
 # test and trial functions on the subspaces of the mixed function spaces as
 # follows: ::

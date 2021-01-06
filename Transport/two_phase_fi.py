@@ -80,6 +80,7 @@ nx = 30
 ny = 15
 Lx = 60                             # m
 Ly = 30                             # m
+quad_mesh = True
 
 # porous media
 poro = 0.33
@@ -119,7 +120,7 @@ sim_time = 864000   # s
 
 # 2) Define mesh
 print('* define mesh')
-mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly)
+mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly, quadrilateral=quad_mesh)
 
 if verbose:
     fd.triplot(mesh)
@@ -131,14 +132,24 @@ if verbose:
 print('* setting problem')
 
 # 3.1) # Define function space for system
-RT1 = fd.FunctionSpace(mesh, "RT", order)
-DG0 = fd.FunctionSpace(mesh, "DG", order - 1)
-W = fd.MixedFunctionSpace([RT1, DG0, DG0])
+if quad_mesh:
+    RT1 = fd.FunctionSpace(mesh, "RTCF", order)
+    DG0 = fd.FunctionSpace(mesh, "DQ", order - 1)
 
-# Others function space
-V = fd.VectorFunctionSpace(mesh, "DG", order - 1)  # pre-process purporse
-T = fd.TensorFunctionSpace(mesh, "DG", order - 1)  # kinv
+    # Others function space
+    V = fd.VectorFunctionSpace(mesh, "DQ", order - 1)  # pre-process purporse
+    T = fd.TensorFunctionSpace(mesh, "DQ", order - 1)  # kinv
+else:
+    RT1 = fd.FunctionSpace(mesh, "RT", order)
+    DG0 = fd.FunctionSpace(mesh, "DG", order - 1)
+
+    # Others function space
+    V = fd.VectorFunctionSpace(mesh, "DG", order - 1)  # pre-process purporse
+    T = fd.TensorFunctionSpace(mesh, "DG", order - 1)  # kinv
+
+W = fd.MixedFunctionSpace([RT1, DG0, DG0])
 P1 = fd.VectorFunctionSpace(mesh, "CG", order)     # post-process purporse
+
 
 # test and trial functions on the subspaces of the mixed function spaces as
 # follows: ::

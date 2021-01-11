@@ -65,13 +65,12 @@ outlet = RIGHT
 noslip = [TOP, BOTTOM]
 
 v_noslip = fd.Constant((.0, .0))
-v_inlet = fd.Constant((0.100, .0))
-p_out = 1e5                         # Pressure [Pa]
-# g_n = fd.Constant(-2e5)
+v_inlet = fd.Constant((0.050, .0))
+p_out = 1e6                         # Pressure [Pa]
 f = fd.Constant((0., rho*0.))
 
 # problem parameters
-verbose = False
+verbose = True
 Beta = - 1              # [+1,-1] non-symmetric/symmetric problem
 gama0 = 100             # stabilization parameter (sufficient large)
 k = 3
@@ -99,8 +98,9 @@ square = fd.conditional(domain, 1/k_cavern, 1/k_porous)
 ikm = fd.Function(fd.FunctionSpace(mesh, "DG", 0), name='invK')
 ikm.interpolate(square)
 if verbose:
-    contours = fd.tripcolor(ikm, cmap="viridis")
-    plt.colorbar(contours)
+    contours = fd.tripcolor(ikm, shading='flat', cmap="viridis")
+    cbar = plt.colorbar(contours, aspect=10)
+    cbar.set_label('Porous Domain')
     plt.savefig("plots/SB_hdiv_doamins.png")
 
 
@@ -186,26 +186,28 @@ vP1 = fd.VectorFunctionSpace(mesh, "CG", 1)
 vel_proj = fd.interpolate(vel, vP1)
 vel_proj.rename('velocity_H1')
 
-# print results
-fd.File("plots/sb_rt.pvd").write(vel_proj,
-                                 fd.interpolate(press, P1),
-                                 ikm)
+# # print results
+# fd.File("plots/sb_rt.pvd").write(vel_proj,
+#                                  fd.interpolate(press, P1))
 
-# fig, axes = plt.subplots(nrows=2)
-# pcor = fd.tripcolor(press, axes=axes[0], shading='flat', cmap='jet')
-# cbar = fig.colorbar(pcor, ax=axes[0])
-# cbar.set_label('Pressure [Pa]')
-# # axes[0].set_title('pressure solution')
-# axes[0].set_aspect('equal')
-# axes[0].axis('off')
+fig, axes = plt.subplots(nrows=2)
+pcor = fd.tripcolor(press, axes=axes[0], shading='flat', cmap='jet')
+cbar = fig.colorbar(pcor, ax=axes[0], aspect=5)
+cbar.set_label('Pressure [Pa]')
+axes[0].set_title('pressure: [{:5.3e},{:5.3e}]'.format(
+    press.dat.data.min(), press.dat.data.max()))
+axes[0].set_aspect('equal')
+axes[0].axis('off')
 
-# pcor = fd.tripcolor(vel_proj, axes=axes[1], shading='flat', cmap='jet')
-# cbar = fig.colorbar(pcor, ax=axes[1])
-# cbar.set_label('Velocity mag [m/s]')
-# # axes[1].set_title('solution')
-# axes[1].set_aspect('equal')
-# axes[1].axis('off')
-# plt.show()
+pcor = fd.tripcolor(vel_proj, axes=axes[1], shading='flat', cmap='jet')
+cbar = fig.colorbar(pcor, ax=axes[1], aspect=5)
+cbar.set_label('Velocity mag [m/s]')
+axes[1].set_title('Velocity mag: [{:5.3e},{:5.3e}]'.format(
+    np.sqrt(np.sum(vel_proj.dat.data*vel_proj.dat.data, axis=1)).min(),
+    np.sqrt(np.sum(vel_proj.dat.data*vel_proj.dat.data, axis=1)).max()))
+axes[1].set_aspect('equal')
+axes[1].axis('off')
+plt.show()
 
 
-print('* normal termination')
+print('normal termination')

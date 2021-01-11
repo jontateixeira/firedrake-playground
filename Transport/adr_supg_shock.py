@@ -176,35 +176,14 @@ if add_shock_term:
 
 F = F1
 
-
-t_params = {
-    'snes_type': 'newtonls',
-    'snes_max_it': 100,
-    'ksp_type': 'gmres',
-    'pc_type': 'sor',
-    'ksp_rtol': 1e-6,
-    'ksp_max_it': 1000
-}
-# 'pc_type': 'bjacobi',
-# 'pc_type': 'sor',
-# 'snes_monitor': True,
-# 'ksp_monitor': True,
-# 'ksp_type': 'lgmres',
-# 'pc_type': 'ilu',
-# 'mat_type': 'aij',
-# 'ksp_rtol': 1e-8,
-# 'ksp_max_it': 2000,
-# 'ksp_monitor_true_residual': None
-#
-
 prob = fd.NonlinearVariationalProblem(F, c, bcs=t_bc)
-transport = fd.NonlinearVariationalSolver(prob, solver_parameters=t_params)
+transport = fd.NonlinearVariationalSolver(prob)
 
 # %%
 # 4) Solve problem
 c0.assign(0.)
 t = it = 0
-outfile = fd.File("plots/adr_supg.pvd")
+outfile = fd.File("plots/adr_supg_shock.pvd")
 c0.rename("c")
 
 dt = CFL*fd.interpolate(h/vnorm, DG0).dat.data.min()

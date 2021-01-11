@@ -164,28 +164,8 @@ tau = h / (2.0 * vnorm)
 F += tau*fd.dot(vel, fd.grad(w)) * R * fd.dx
 
 
-# solver_parameters = {
-#     'ksp_type': 'lgmres',
-#     'pc_type': 'ilu',
-#     'mat_type': 'aij',
-#     'ksp_rtol': 1e-8,
-#     'ksp_max_it': 2000,
-#     'ksp_monitor_true_residual': None
-# }
-t_params = {
-    'snes_type': 'newtonls',
-    'snes_max_it': 100,
-    'ksp_type': 'gmres',
-    'pc_type': 'sor',
-    'ksp_rtol': 1e-6,
-    'ksp_max_it': 1000,
-    # 'pc_type': 'bjacobi',
-    # 'pc_type': 'sor',
-    # 'snes_monitor': True,
-    # 'ksp_monitor': True,
-}
 prob = fd.NonlinearVariationalProblem(F, c, bcs=t_bc)
-transport = fd.NonlinearVariationalSolver(prob, solver_parameters=t_params)
+transport = fd.NonlinearVariationalSolver(prob)
 
 # %%
 # 4) Solve problem

@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Solves the two phases flow through porous media problem in a full implicit
-scheme.
+Solves unsteady state advection-diffusion problem through porous media in the
+sequential implicit scheme.
 
 Strong form:
 
     - 2*mu*D(u) + mu*K^(-1)*u + grad(p) = 0         in Omega
                                  div(u) = 0         in Omega
-   dc/dt + div(c*u) - div(Diff*grad(c)) = f - k*c^n in Omega
+   dc/dt + div(c*u) - div(Diff*grad(c)) = f         in Omega
 
 where,
 
@@ -20,17 +20,17 @@ Weak form:
 
 Find u, p, c in W, such that,
 
-(2*mu*D(v),D(u)) - (p,div(v)) 
-    + (mu*K^(-1)*u,v) 
-    - ({2*mu*D(u)*n},[v])_S 
+(2*mu*D(v),D(u)) - (p,div(v))
+    + (mu*K^(-1)*u,v)
+    - ({2*mu*D(u)*n},[v])_S
     - (Beta*[u],{2*mu*D(v)})_S = (v,p*n)_N             on Omega
 
                    (q, div(u)) = 0                     on Omega
 
-(r,(c - c0)) + dt*([r],[ũ*c_])_S - dt*(grad(r),u*c_) 
-    + dt*(r,ũ.n*cIn)_Inlet + dt*(r,c_*ũ)_s 
-    + dt*(Diff*grad(c_),grad(r)) 
-    - dt*([r,n],{Diff*grad(c_)})_S 
+(r,(c - c0)) + dt*([r],[ũ*c_])_S - dt*(grad(r),u*c_)
+    + dt*(r,ũ.n*cIn)_Inlet + dt*(r,c_*ũ)_s
+    + dt*(Diff*grad(c_),grad(r))
+    - dt*([r,n],{Diff*grad(c_)})_S
     + eps*({Diff*fd.grad(phi)},[c_mid, n])_S
     + {gamma/h_E}*([r, n], [c_, n])_S = 0              on Omega
 
@@ -54,6 +54,9 @@ p(x, t) = pbar      on Gamma_2
 u(x, t) = noflow    on Gamma_{3, 4} if u.n < 0
 u(x, t) = qbar      on Gamma_1
 c(x, t) = cIn       on Gamma_1 if u.n < 0
+
+-----
+* NOTE: problem not stable! yet...
 """
 
 # %%
@@ -100,8 +103,6 @@ f = fd.Constant((0., rho*0.))
 
 # reaction/transport parameter
 Dm = 1e-5                     # modelecular diffusivity
-alphaL = 2e-3                 # longitudinal dispersivity
-alphaT = 1e-3                 # transverse dispersivity
 
 
 # boundary conditions
@@ -119,7 +120,6 @@ cIn = 1.0
 # problem parameters
 Beta = - 1              # [+1,-1] non-symmetric/symmetric problem
 gama0 = 100             # stabilization parameter (sufficient large)
-k = 3
 eps = +1                # [+1,0,-1] non-symmetric,Incomplete,Symmetric problem
 tol = 1e-15
 verbose = False
@@ -139,7 +139,7 @@ mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly, quadrilateral=quad_mesh)
 if verbose:
     fd.triplot(mesh)
     plt.legend()
-    plt.savefig("plots/sb_adr_mesh.png")
+    plt.savefig("plots/sb_ade_mesh.png")
 
 # Define subdomains
 x = fd.SpatialCoordinate(mesh)
@@ -154,7 +154,7 @@ if verbose:
     contours = fd.tripcolor(ikm, cmap="viridis")
     cbar = plt.colorbar(contours, aspect=10)
     cbar.set_label("Porous Domain")
-    plt.savefig("plots/sb_adr_doamins.png")
+    plt.savefig("plots/sb_ade_doamins.png")
 
 
 # 3) Setting problem (FunctionSpace, Init.Bound.Condition, VariationalForms)
@@ -231,7 +231,7 @@ L = fd.inner(f, v)*fd.dx + p_out*fd.inner(v, n)*fd.ds(outlet)
 # -------------------------------------------------------------------------
 # transport
 # coefficients
-dt = sim_time / nsteps
+dt = np.sqrt(tol)
 Dt = fd.Constant(dt)
 c_mid = 0.5 * (c + c0)  # Crank-Nicolson timestepping
 
@@ -242,11 +242,9 @@ h_E = fd.sqrt(2) * fd.CellVolume(mesh) / fd.CellDiameter(mesh)
 
 # advective velocity
 vel = fd.Function(RT1)
-vnorm = fd.sqrt(fd.dot(vel, vel))
 
 # Diffusion tensor
-Diff = fd.Identity(mesh.geometric_dimension())*(Dm + alphaT*vnorm) + \
-    (alphaL-alphaT)*fd.outer(vel, vel)/vnorm
+Diff = fd.Identity(mesh.geometric_dimension())*Dm
 
 # upwind term
 vn = 0.5*(fd.dot(vel, n) + abs(fd.dot(vel, n)))
@@ -277,34 +275,30 @@ F = F_t + F_a + F_d
 # %%
 # 4) Solve problem
 # -----------------
-t = 0.0
-it = 0
-cfl_conditional = fd.conditional(fd.lt(np.abs(vnorm), tol), 1/tol, h_E/vnorm)
+vnorm = fd.sqrt(fd.dot(vel, vel))
+wave_speed = fd.conditional(fd.lt(np.abs(vnorm), tol), h_E/tol, h_E/vnorm)
 outfile = fd.File("plots/sb_ade.pvd")
 
 x = fd.Function(W)
-vD = fd.Function(P1v, name="Velocity Darcy")
 c0.assign(0.0)
 
 # initialize timestep
+t = 0.0
+it = 0
+
 while t < sim_time:
-    # move next time step
     t += dt
     print("* iteration= {:4d}, dtime= {:8.6f}, time={:8.6f}".format(it, dt, t))
 
     # SB
     fd.solve(a == L, x, bcs=bcF)
-    vel.assign(x.sub(0))
-    CFL = dt/fd.interpolate(cfl_conditional, DG0).dat.data.min()
-    print('vel = {}; CFL = {}'.format(
-        np.sqrt(np.sum(vel.dat.data*vel.dat.data)).max(), CFL))
 
     # tracer
-    fd.solve(F == 0, c)
+    vel.assign(x.sub(0))
+    fd.solve(F == 0, c, bcs=bcT)
 
     # update sol.
     c0.assign(c)
-    it += 1
 
     # acochambramento c (c<1) and (c>0)
     val = c0.dat.data
@@ -312,6 +306,10 @@ while t < sim_time:
         val[val > 1.0] = 1.
         val[val < np.sqrt(tol)] = 0.
         c0.dat.data[:] = val
+
+    # CFL
+    CFL = dt/fd.interpolate(wave_speed, DG0).dat.data.min()
+    print('vel = {}; CFL = {}'.format(vel.dat.data.max(), CFL))
 
     # %%
     # 5) print results
@@ -328,5 +326,11 @@ while t < sim_time:
         v.rename("velocidade")
         c0.rename("concentration")
         outfile.write(p, v, c0, time=t)
+        print('-- write results @ t= {}'.format(t))
+
+    # move next time step
+    it += 1
+    dt = sim_time / nsteps
+    Dt.assign(dt)
 
 print('* normal termination.')

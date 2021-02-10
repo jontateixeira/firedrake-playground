@@ -107,10 +107,10 @@ Dm = 1e-5                     # modelecular diffusivity
 
 # boundary conditions
 inlet = LEFT
-v_inlet = fd.Constant((0.05, .0))
+v_inlet = fd.Constant((0.0005, .0))
 
 outlet = RIGHT
-p_out = fd.Constant(1e5)            # Pressure [Pa]
+p_out = fd.Constant(1e6)            # Pressure [Pa]
 
 noslip = [TOP, BOTTOM]
 v_noslip = fd.Constant((.0, .0))
@@ -123,9 +123,9 @@ gama0 = 100             # stabilization parameter (sufficient large)
 eps = +1                # [+1,0,-1] non-symmetric,Incomplete,Symmetric problem
 tol = 1e-15
 verbose = False
-freq_res = 100
-nsteps = 1000        # number of time steps
-sim_time = 1200.0     # simulation time
+freq_res = 25
+nsteps = 500        # number of time steps
+sim_time = 86400.0     # simulation time
 
 
 # %%
@@ -265,7 +265,7 @@ F_d = Dt*(fd.inner(Diff*fd.grad(c_mid), fd.grad(phi))*fd.dx
 # advection form
 F_a = Dt*((phi('+') - phi('-'))*(vn('+')*c_mid('+') -
                                  vn('-')*c_mid('-'))*fd.dS
-          - fd.inner(fd.grad(phi), vel*c_mid)*fd.dx
+          - fd.inner(fd.grad(phi), vel*c_mid)*fd.dx     # another way
           + fd.conditional(fd.dot(vel, n) < 0, phi *
                            fd.dot(vel, n)*cIn, 0.0)*fd.ds
           + phi*c_mid*vn*fd.ds)

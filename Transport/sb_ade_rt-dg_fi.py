@@ -106,7 +106,7 @@ Dm = 1e-5                     # modelecular diffusivity
 
 # boundary conditions
 inlet = LEFT
-v_inlet = fd.Constant((0.001, .0))
+v_inlet = fd.Constant((0.0005, .0))
 
 outlet = RIGHT
 p_out = fd.Constant(1e6)            # Pressure [Pa]
@@ -122,9 +122,9 @@ gama0 = 100             # stabilization parameter (sufficient large)
 eps = +1                # [+1,0,-1] non-symmetric,Incomplete,Symmetric problem
 tol = 1e-15
 verbose = False
-freq_res = 100
-nsteps = 1000        # number of time steps
-sim_time = 1200.0     # simulation time
+freq_res = 25
+nsteps = 500        # number of time steps
+sim_time = 86400.0     # simulation time
 
 
 # %%
@@ -230,7 +230,7 @@ F_sb = 2*mu*fd.inner(D(v), D(u))*fd.dx - p*fd.div(v)*fd.dx + \
 # transport
 # coefficients
 Dt = fd.Constant(np.sqrt(tol))
-c_mid = 0.5 * (c + c0)  # Crank-Nicolson timestepping
+c_mid = 0.5 * (c0 + c)  # Crank-Nicolson timestepping
 
 # stability
 gamma = fd.Constant(2*(mesh.geometric_dimension()+1) /
@@ -262,10 +262,11 @@ F_d = Dt*(fd.inner(Diff*fd.grad(c_mid), fd.grad(r))*fd.dx
 # advection form
 F_a = Dt*((r('+') - r('-'))*(vn('+')*c_mid('+') -
                              vn('-')*c_mid('-'))*fd.dS
-          - fd.inner(fd.grad(r), u*c_mid)*fd.dx
+          - fd.div(u*r)*c_mid*fd.dx
           + fd.conditional(fd.dot(u0, n) < 0, r *
                            fd.dot(u0, n)*cIn, 0.0)*fd.ds
-          + r*c_mid*vn*fd.ds)
+          + fd.conditional(fd.dot(u0, n) > 0, r *
+                           fd.dot(u0, n)*c, 0.0)*fd.ds)
 # full weak form
 F = F_sb + F_t + F_a + F_d
 
@@ -310,7 +311,7 @@ while t < sim_time:
 
     # acochambramento c (c<1) and (c>0)
     val = w0.sub(2).dat.data
-    if np.any((val > 1.0) + (val < np.sqrt(tol))):
+    if np.any((val > 1.000001) + (val < 1e-5)):
         val[val > 1.0] = 1.
         val[val < np.sqrt(tol)] = 0.
         w0.sub(2).dat.data[:] = val

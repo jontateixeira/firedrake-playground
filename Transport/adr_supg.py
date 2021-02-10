@@ -1,9 +1,7 @@
 #!/home/john/opt/firedrake/bin/python3
 # -*- coding: utf-8 -*-
-
 """
-Solves the unsteady state advection-diffusion-reaction problem, using SUPG and
-shock capturing term
+Solves the unsteady state advection-diffusion-reaction problem, using SUPG
 
 Strong form (SF):
 
@@ -17,17 +15,13 @@ Weak form:
 Find c in W, such that,
 
         (w, dc/dt) + (w, u.grad(c)) + (grad(w),D*grad(c)) 
-                   + (w, k*c^n) + SUPG + Shock = (w, f)            on Omega
+                   + (w, k*c^n) + SUPG = (w, f)            on Omega
 
 where,
         SUPG  = (grad(w),tau*res*u)
           res = dc/dt + (w, u.grad(c)) + (grad(w),D*grad(c)) 
                    + (w, k*c^n) - (w, f)
           tau = h_mesh/(2*||u||)
-        Shock = (grad(w),vshock*|res|*grad(c))
-                 { Beta*h_mesh*abs(res)/(2*||grad(c)||), if ||grad(c)|| > 0
-       vshock <--{
-                 { 0, o.w
 
 for all w in W'.
 
@@ -51,7 +45,7 @@ c(x, t) = cbar      on Gamma_1
 import firedrake as fd
 import numpy as np
 import matplotlib.pyplot as plt
-print('* loaded modules')
+print('* modules loaded')
 
 # %%
 # 0.1) setting constants
@@ -63,7 +57,7 @@ TOP = 4
 # %%
 # 1) Problem Parameters:
 # ======================
-print('* setting problem parameters')
+print('* problem setting')
 
 # domain parameters
 order = 1
@@ -76,19 +70,21 @@ quad_mesh = True
 
 
 # reaction/transport parameter
-Diff = 1e-1                 # diffusion coefficient
-K = 0.01                      # reaction rate
+Dif = 1e-2                  # diffusion (m²/s)
+d_l = 4.0                   # longitidinal dispersion (m)
+d_t = 1.0                   # transversal dispersion (m)
+K = 0.00                    # reaction rate (mol/m³/s)
 h_n = fd.Constant(0.)       # outflow condition (BC)
-cIn = 1.0
-s = 0.0
-add_shock_term = True
-beta = 1.0  # 2.0
+cIn = 1.0                   # injection conc
+fcenter = 2
+s = 0.0                     # source
 
 # problem parameters
 verbose = False
-freq_res = 50
-CFL = 0.25
-sim_time = 50.0     # simulation time
+freq_res = 10
+CFL = 0.5          # CFL number
+dt = 0.5          # time steps size (initial)
+sim_time = 40.0     # simulation time
 
 # boundary conditions parameters
 inlet = LEFT
@@ -106,13 +102,13 @@ mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly, quadrilateral=quad_mesh)
 if verbose:
     fd.triplot(mesh)
     plt.legend()
-    plt.savefig("plots/adr_supg_mesh.png")
+    plt.savefig("plots/SB_mesh.png")
 
-# 3) Setting problem (FunctionSpace, Init.Condition, VariationalForms)
+# 3) Setting problem (FunctionSpace, Init.Bound.Condition, VariationalForms)
 
 # 3.1) # Define function space for system of concentrations (transport)
 X = fd.FunctionSpace(mesh, "CG", order)
-V = fd.VectorFunctionSpace(mesh, "CG", order + 1)
+V = fd.VectorFunctionSpace(mesh, "CG", order)
 
 # Others function space
 DG0 = fd.FunctionSpace(mesh, "DG", 0)
@@ -134,47 +130,39 @@ t_bc = fd.DirichletBC(X, cIn, inlet)
 # 3.4) Variational Form
 # coefficients
 # advective velocity
-vel = fd.Function(V, name='velocity').interpolate(fd.as_vector([1.0, 0.]))
+vel = fd.Function(V, name='velocity').interpolate(fd.as_vector([1.000, 0.]))
+vnorm = fd.sqrt(fd.dot(vel, vel))
 K = fd.Constant(K)
-Diff = fd.Constant(Diff)
-Dt = fd.Constant(1e-3)
+# Diffusion tensor
+Diff = fd.Identity(mesh.geometric_dimension())*(Dif + d_t*vnorm) + \
+    fd.Constant(d_l-d_t)*fd.outer(vel, vel)/vnorm
+# print('Diffusion = {}'.format(fd.interpolate(fd.det(Diff), DG0).dat.data.mean()))
+
+Dt = fd.Constant(dt)
 c_mid = 0.5 * (c + c0)  # Crank-Nicolson timestepping
 fc = fd.Constant(s)
 
 # weak form (transport)
-F1 = w*(c - c0)*fd.dx + Dt*(w*fd.dot(vel, fd.grad(c_mid))
-                            + Diff*fd.dot(fd.grad(w),
-                                          fd.grad(c_mid)) + w*K*c_mid
-                            - fc*w)*fd.dx  # - Dt*h_n*w*fd.ds(outlet)
+F = w*(c - c0)*fd.dx + Dt*(w*fd.dot(vel, fd.grad(c_mid))
+                           + fd.dot(fd.grad(w),
+                                    Diff*fd.grad(c_mid)) + w*K*c_mid
+                           - fc*w)*fd.dx  # - Dt*h_n*w*fd.ds(outlet)
 
 # strong form
 R = (c - c0) + Dt*(fd.dot(vel, fd.grad(c_mid)) -
-                   Diff*fd.div(fd.grad(c_mid)) + K*c_mid - fc)
+                   fd.div(Diff*fd.grad(c_mid)) + K*c_mid - fc)
 
 
 # *** Adding SUPG stabilizing and shock cap. terms ***
 # SUPG stabilisation parameters
-vnorm = fd.sqrt(fd.dot(vel, vel))
 h = fd.sqrt(2)*fd.CellVolume(mesh) / fd.CellDiameter(mesh)
 # h = fd.CellSize(mesh)
 tau = h / (2.0 * vnorm)
-# tau = fd.pow(1/(0.5*Dt) + 2.0*vnorm/h + 4*Diff/fd.pow(h, 2.0), -1)
+# tau = pow(1/(0.5*Dt) + 2.0*vnorm/h + 4*Diff/pow(h, 2.0), -1)
 
 # Residual and stabilizing terms
-F1 += tau*fd.dot(vel, fd.grad(w)) * R * fd.dx
+F += tau*fd.dot(vel, fd.grad(w)) * R * fd.dx
 
-# shock capturing parameters
-if add_shock_term:
-    cnorm = fd.sqrt(fd.dot(fd.grad(c0), fd.grad(c0)))
-    vshock = fd.conditional(fd.gt(cnorm, 1e-15),
-                            beta*h / (2*cnorm),  # *cnorm,
-                            fd.Constant(0.))
-
-    # shock terms
-    # F1 += vshock*fd.dot(fd.grad(w), fd.grad(c_mid))*fd.dx
-    F1 += vshock*np.abs(R)*fd.inner(fd.grad(w), fd.grad(c_mid))*fd.dx
-
-F = F1
 
 prob = fd.NonlinearVariationalProblem(F, c, bcs=t_bc)
 transport = fd.NonlinearVariationalSolver(prob)
@@ -183,32 +171,25 @@ transport = fd.NonlinearVariationalSolver(prob)
 # 4) Solve problem
 c0.assign(0.)
 t = it = 0
-outfile = fd.File("plots/adr_supg_shock.pvd")
-c0.rename("c")
-
-dt = CFL*fd.interpolate(h/vnorm, DG0).dat.data.min()
-Dt.assign(dt)
 dt0 = dt
-
-Pe = vnorm * h / (2.0 * Diff)
-print('Peclet = {}; dt = {}'.format(fd.interpolate(Pe, DG0).dat.data.mean(), dt))
-D = fd.interpolate(vshock*np.abs(R), DG0)
-D.rename("visc_shock")
-
+outfile = fd.File("plots/adr_supg.pvd")
+c0.rename("c")
 while t < sim_time:
     # move next time step
     t += np.min([sim_time-t, dt])
     print("* iteration= {:4d}, dtime= {:8.6f}, time={:8.6f}".format(it, dt, t))
 
-    Pe = vnorm * h / (2.0 * Diff)
+    Pe = vnorm * h / (2.0 * fd.det(Diff))
     print('Peclet = {}'.format(fd.interpolate(Pe, DG0).dat.data.mean()))
 
     # transport
+    Dt.assign(np.min([sim_time-t, dt]))
     transport.solve()
     it += 1
-    # res = fd.norm(fd.interpolate(R, DG0))
-    # print('Residual = {}'.format(res))
+    res = fd.norm(fd.interpolate(R, DG0))
+    print('Residual = {}'.format(res))
 
+    dt = CFL*fd.interpolate(h/vnorm, DG0).dat.data.min()
     dt = np.min([sim_time-t, dt]) if (sim_time-t) > dt else dt0
 
     # update sol.
@@ -223,8 +204,5 @@ while t < sim_time:
             plt.ylabel(r'$y$')
             plt.colorbar(contours)
             plt.show()
-        if add_shock_term:
-            D.assign(fd.interpolate(vshock*np.abs(R), DG0))
-            outfile.write(vel, c0, D, time=t)
-        else:
-            outfile.write(vel, c0, time=t)
+
+        outfile.write(vel, c0, time=t)

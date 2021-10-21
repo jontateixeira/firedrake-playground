@@ -1,7 +1,0 @@
-{
-    "code-runner.executorMap": {
-        "python": "/home/john/opt/firedrake/bin/python3"
-    },
-    "python.pythonPath": "/home/john/opt/firedrake/bin/python3"
-    
-}

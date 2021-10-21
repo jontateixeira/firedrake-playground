@@ -7,6 +7,7 @@ This playground repo contains several scripts to solve some problems that I face
     * Galerkin Darcy continuity (compressible hydrostatic) equation.
     * Mixed finite element (raviart-thomas) for darcy flow with spatially varying permeability ,inspired in mrst lognormal function.
     * Mixed finite element (raviart-thomas) for linear stokes-brinkman problem. 
+    * Mixed finite element (Taylor-Hood) for slighlty compressible stokes-brinkman problem.
 
 
 * **Transport**

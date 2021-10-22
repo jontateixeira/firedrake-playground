@@ -102,7 +102,7 @@ mesh = fd.RectangleMesh(nx * n, ny * n, Lx, Ly, quadrilateral=quad_mesh)
 if verbose:
     fd.triplot(mesh)
     plt.legend()
-    plt.savefig("plots/SB_mesh.png")
+    plt.savefig("plots/adr_supg_mesh.png")
 
 # 3) Setting problem (FunctionSpace, Init.Bound.Condition, VariationalForms)
 

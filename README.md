@@ -6,7 +6,7 @@ This playground repo contains several scripts to solve some problems that I face
 * **Flow**
     * Galerkin Darcy continuity (compressible hydrostatic) equation.
     * Mixed finite element (raviart-thomas) for darcy flow with spatially varying permeability ,inspired in mrst lognormal function.
-    * Mixed finite element (raviart-thomas) for linear stokes-brinkman problem. 
+    * Mixed finite element (raviart-thomas) for linear stokes-brinkman problem.
     * Mixed finite element (Taylor-Hood) for slighlty compressible stokes-brinkman problem.
 
 
@@ -15,6 +15,7 @@ This playground repo contains several scripts to solve some problems that I face
         - SUPG
         - SUPG + shock capturing stabilization
         - DG
+        - Hybridizable DG (without CN)
     * Two phases flow through porous media problem in a full implicit scheme.
 
 * **Thermal**

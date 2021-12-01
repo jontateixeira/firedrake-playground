@@ -61,34 +61,34 @@ print('* problem setting')
 
 # domain parameters
 order = 1
-n = 4
+n = 2
 nx = 30
 ny = 5
-Lx = 60                             # m
-Ly = 10                             # m
+Lx = 1.0                             # m
+Ly = 0.4                             # m
 quad_mesh = True
 
 
 # reaction/transport parameter
-Dif = 1e-2                  # diffusion (m²/s)
-d_l = 4.0                   # longitidinal dispersion (m)
-d_t = 1.0                   # transversal dispersion (m)
+# reaction/transport parameter
+Dm = 1e-9                   # diffusion (m²/s)
+d_l = 0.0                   # longitidinal dispersion (m)
+d_t = 0.0                   # transversal dispersion (m)
 K = 0.00                    # reaction rate (mol/m³/s)
-h_n = fd.Constant(0.)       # outflow condition (BC)
-cIn = 1.0                   # injection conc
-fcenter = 2
 s = 0.0                     # source
+
+# boundary conditions parameters
+inlet = LEFT
+v_inlet = fd.Constant((1.0e-6, .0))
+cIn = 1.0                   # injection conc
 
 # problem parameters
 verbose = False
 freq_res = 10
-CFL = 0.5          # CFL number
-dt = 0.5          # time steps size (initial)
-sim_time = 40.0     # simulation time
+dt = 2000          # time steps size (initial)
+sim_time = 1.0e6     # simulation time
 
-# boundary conditions parameters
-inlet = LEFT
-outlet = RIGHT
+ptimes = [2e5, 4e5, 6e5, 8e5, 1e6]
 
 
 # %%
@@ -118,8 +118,8 @@ w = fd.TestFunction(X)
 
 
 # 3.2) Set initial conditions
-c0 = fd.Function(X, name="conc0")
-c = fd.Function(X, name="conc")
+c0 = fd.Function(X, name="c")
+c = fd.Function(X)
 
 
 # 3.3) set boundary conditions
@@ -130,15 +130,18 @@ t_bc = fd.DirichletBC(X, cIn, inlet)
 # 3.4) Variational Form
 # coefficients
 # advective velocity
-vel = fd.Function(V, name='velocity').interpolate(fd.as_vector([1.000, 0.]))
+vel = fd.Function(V, name='velocity')
+vel.interpolate(v_inlet)
 vnorm = fd.sqrt(fd.dot(vel, vel))
-K = fd.Constant(K)
+
+
 # Diffusion tensor
-Diff = fd.Identity(mesh.geometric_dimension())*(Dif + d_t*vnorm) + \
+Diff = fd.Identity(mesh.geometric_dimension())*(Dm + d_t*vnorm) + \
     fd.Constant(d_l-d_t)*fd.outer(vel, vel)/vnorm
-# print('Diffusion = {}'.format(fd.interpolate(fd.det(Diff), DG0).dat.data.mean()))
+Diff = fd.Identity(mesh.geometric_dimension())*Dm
 
 Dt = fd.Constant(dt)
+K = fd.Constant(K)
 c_mid = 0.5 * (c + c0)  # Crank-Nicolson timestepping
 fc = fd.Constant(s)
 
@@ -163,41 +166,53 @@ tau = h / (2.0 * vnorm)
 # Residual and stabilizing terms
 F += tau*fd.dot(vel, fd.grad(w)) * R * fd.dx
 
+c0.assign(0.)
+outfile = fd.File("plots/adr_supg.pvd")
 
-prob = fd.NonlinearVariationalProblem(F, c, bcs=t_bc)
-transport = fd.NonlinearVariationalSolver(prob)
+
+dt = 0.07*fd.interpolate(h/vnorm, DG0).dat.data.min()
+dt0 = dt
+
+problem = fd.NonlinearVariationalProblem(F, c, bcs=t_bc)
+transport = fd.NonlinearVariationalSolver(problem)
 
 # %%
 # 4) Solve problem
-c0.assign(0.)
-t = it = 0
-dt0 = dt
-outfile = fd.File("plots/adr_supg.pvd")
-c0.rename("c")
+t = 0.0
+it = 0
+
+
+p = 0
 while t < sim_time:
+    # check dt
+    dt = np.min([sim_time-t, dt]) if (sim_time-t) > dt else dt0
+    if (t + dt > ptimes[p]):
+        dt = ptimes[p] - t
     # move next time step
-    t += np.min([sim_time-t, dt])
+    Dt.assign(dt)
+
+    # move next time step
+    it += 1
+    t += dt
     print("* iteration= {:4d}, dtime= {:8.6f}, time={:8.6f}".format(it, dt, t))
 
+
     Pe = vnorm * h / (2.0 * fd.det(Diff))
-    print('Peclet = {}'.format(fd.interpolate(Pe, DG0).dat.data.mean()))
+    print('Peclet = {}'.format(fd.interpolate(Pe, X).dat.data.mean()))
 
     # transport
-    Dt.assign(np.min([sim_time-t, dt]))
     transport.solve()
-    it += 1
-    res = fd.norm(fd.interpolate(R, DG0))
+    
+    res = fd.norm(fd.interpolate(R, X))
     print('Residual = {}'.format(res))
-
-    dt = CFL*fd.interpolate(h/vnorm, DG0).dat.data.min()
-    dt = np.min([sim_time-t, dt]) if (sim_time-t) > dt else dt0
 
     # update sol.
     c0.assign(c)
 
     # %%
     # 5) print results
-    if it % freq_res == 0:
+    # if it % freq_res == 0:
+    if t == ptimes[p]:
         if verbose:
             contours = fd.tripcolor(c0)
             plt.xlabel(r'$x$')
@@ -206,3 +221,8 @@ while t < sim_time:
             plt.show()
 
         outfile.write(vel, c0, time=t)
+        p += 1
+        dt = 2e3
+
+
+print('* normal termination.')

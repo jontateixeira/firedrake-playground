@@ -112,3 +112,8 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# vcode settings
+/vscode
+
+# firedrake folder
+/firedrake

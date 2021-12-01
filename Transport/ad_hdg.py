@@ -76,10 +76,8 @@ print('* setting problem parameters')
 # domain parameters
 order = 3
 refine = 1
-nx = 4
-ny = 4
-Lx = 1.0 # m
-Ly = 1.0 # m
+n = 4
+L = 1.0 # m
 from_file = True
 quad_mesh = False
 post_process = True
@@ -104,7 +102,7 @@ if from_file:
     mesh = fd.Mesh("nguyen.msh")
     mesh.init()
 else:
-    mesh = fd.RectangleMesh(nx * refine, ny * refine, Lx, Ly, quadrilateral=quad_mesh, diagonal="right")
+    mesh = fd.SquareMesh(n, n, L, quadrilateral=quad_mesh, diagonal="right")
 
 x, y = fd.SpatialCoordinate(mesh)
 if verbose:
